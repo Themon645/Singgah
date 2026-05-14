@@ -1,66 +1,103 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:singgah/features/destination/domain/entities/destination.dart';
+import 'package:singgah/features/destination/data/services/overpass_service.dart';
 
 final destinationsProvider = Provider<List<Destination>>((ref) {
   return [
+    // BANDUNG
     Destination(
-      id: 'd1',
-      name: 'Tangkuban Perahu',
-      category: 'Wisata Alam',
-      imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuABiuBDs55LESkKItGACIZ0Ap2IaqBMcKKwlQOLNfomWinnwUKpBF5ZppqKo3ervnrGaGj7o0ydVNz7cMlaGeGVjP06ppelAjXiFTmKXcYZQVbMuaRa1X8L7KztyeOPujuaMWJ59R7giNoowsB3EEEtc7maDZbkMgRbf9o1uxEVxcP5tONaMLgRndqMfXKmhJi1eJlbt8w9Rt2RTH6-JKkRAUSSs1bNsliOCScriVEw5MUDFT1KE9-HJXSRumvrjKJ9MyRTqtidBcc',
-      location: 'Lembang',
+      id: 'b1',
+      name: 'Kopi Toko Djawa',
+      category: 'Cafe',
+      imageUrl: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?q=80&w=400',
+      location: 'Braga, Bandung',
       rating: 4.8,
-      latitude: -6.7596377,
-      longitude: 107.5925345,
     ),
     Destination(
-      id: 'd2',
-      name: 'Lawangwangi Art',
-      category: 'Seni & Budaya',
-      imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAQo7_HSG3eBYkqW50ytifCeGAESXoNtnSI_im9MPtww6glvtWDbg-VRWSTcTQMMgoCcCp34Ai1gV3AnUBx9EBgYSWwlqU8xzRDNdrlZYV9jygyCblpdkPOiRYufPrQq7qQG6OFb5AcjSNVw3YT9sP4cxXhRqOfdZUOHY2WUeAfuoPYnzxYzTS3ECAkU5yOShHyI7dzC6fimLr0pJLXcyc7u67awT2pHJm51Y4nmjP3lrdgOb3PIbfA-A0t4gQ3Tg7JXKzRD9XmgJ8',
-      location: 'Dago Pakar',
-      rating: 4.7,
-      latitude: -6.845585,
-      longitude: 107.618685,
-    ),
-    Destination(
-      id: 'd3',
-      name: 'Kawah Putih',
-      category: 'Wisata Alam',
-      imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDS4Im_Mrxh5PUvXtZqlIFt-BJv9ZLLrcqW0sv-fKkW3kvVPTzGg726kauIrC-dWDZ00FM7sHOmdbD-Ttxbvgkei-c4Vh3EJLkqWXBus-8h1EZi-6ju3PErELJzUUdxNlO0dLmCgp9nfA8OR6mNgqKJpK-7ul1hTUMdbagxlzUrs4zPHyEYH6rpeo_bLoH5TqkqNzWELeCEQw1_ELboFghSDA0BNATBm8R_Q8CQz8kFQnrjW_sctMVuQdoxQ1PYWbmoSmAjiL8lBrw',
-      location: 'Ciwidey',
+      id: 'b2',
+      name: 'The Gaia Hotel',
+      category: 'Hotel',
+      imageUrl: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=400',
+      location: 'Setiabudi, Bandung',
       rating: 4.9,
-      latitude: -7.166204,
-      longitude: 107.402135,
     ),
     Destination(
-      id: 'd4',
-      name: 'Braga Street',
-      category: 'Seni & Budaya',
-      imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCrZ1nljcK7OzSLNFE-ErHa6rzjJQxoEjDbAWujvQnz6xshsGOqLNfd-ZPMX77qUf6LcurgZh3WUe5W91Ms2mcBRhb_as3g89U6X_4tiEpAn5tUkKP-IPYVYQ5SybKJPrCVfCXaOJNMXrTK1ScOfEYMlKhoi1SmctFRbdJLIaKQYBX94rzZJDWqeCqsCb3G-0ocyAWi4TYe3irmM8GrvpIOmBPWDZV4Cd_Vtpk_V5nkND1tnf5Gopx-jGsf0gtmegV3_NWsZ_4KG7Q',
-      location: 'Heritage',
+      id: 'b3',
+      name: 'Kawah Putih',
+      category: 'Wisata',
+      imageUrl: 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=400',
+      location: 'Ciwidey, Bandung',
+      rating: 4.7,
+    ),
+    
+    // BALI
+    Destination(
+      id: 'ba1',
+      name: 'Sisterfields Cafe',
+      category: 'Cafe',
+      imageUrl: 'https://images.unsplash.com/photo-1559925393-8be0ec41b50d?q=80&w=400',
+      location: 'Seminyak, Bali',
       rating: 4.6,
-      latitude: -6.917637,
-      longitude: 107.609104,
     ),
     Destination(
-      id: 'd5',
-      name: 'Seniman Coffee',
-      category: 'Kuliner',
-      imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAs4qNZF9GHDkb4oUUnLWx5CCOpuAGl78kOYVMs4PruoqOhOKqUbE0ggGMBhBpFK9AfAY4lVXWFjfvaE3fhjYQLhCXXC7PahsE40ivqgL9zIXAlSkXpc9geQ1gbXIvtq9aVvkIVBcQaOVAzzlrPrKBWWKIkt6uM9RVYdHTcorfDLlo2vBHVsRwypgM4M7JrZbXi2NymkHXJhf_RtMkehCPagnuU9uA_yH-BYitnIw9GFbDkRlwko65IdqJDhol83cj2wjT_gnadYtw',
-      location: 'Ubud',
+      id: 'ba2',
+      name: 'Ayana Resort',
+      category: 'Hotel',
+      imageUrl: 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=400',
+      location: 'Jimbaran, Bali',
+      rating: 4.9,
+    ),
+    Destination(
+      id: 'ba3',
+      name: 'Tanah Lot',
+      category: 'Wisata',
+      imageUrl: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?q=80&w=400',
+      location: 'Tabanan, Bali',
       rating: 4.8,
-      latitude: -8.506854,
-      longitude: 115.262478,
+    ),
+
+    // JOGJA
+    Destination(
+      id: 'j1',
+      name: 'Tempo Gelato',
+      category: 'Cafe',
+      imageUrl: 'https://images.unsplash.com/photo-1501443762994-82bd5dace89a?q=80&w=400',
+      location: 'Prawirotaman, Yogyakarta',
+      rating: 4.7,
+    ),
+    Destination(
+      id: 'j2',
+      name: 'Amanjiwo',
+      category: 'Hotel',
+      imageUrl: 'https://images.unsplash.com/photo-1582719478250-c89cae4df85b?q=80&w=400',
+      location: 'Borobudur, Yogyakarta',
+      rating: 5.0,
     ),
   ];
 });
 
 final searchDestinationsProvider = Provider.family<List<Destination>, String>((ref, query) {
   final allDestinations = ref.watch(destinationsProvider);
-  if (query.isEmpty) return [];
-  return allDestinations.where((d) => 
-    d.name.toLowerCase().contains(query.toLowerCase()) || 
-    d.category.toLowerCase().contains(query.toLowerCase())
-  ).toList();
+  final nearbyAsync = ref.watch(nearbyDestinationsProvider((lat: -6.2088, lon: 106.8456)));
+  
+  List<Destination> combinedList = [...allDestinations];
+  nearbyAsync.whenData((places) {
+    for (var place in places) {
+      if (!combinedList.any((d) => d.id == place.id)) combinedList.add(place);
+    }
+  });
+
+  if (query.isEmpty || query.toLowerCase() == 'semua') return combinedList;
+  final lowerQuery = query.toLowerCase();
+  
+  return combinedList.where((d) {
+    return d.name.toLowerCase().contains(lowerQuery) || 
+           d.category.toLowerCase().contains(lowerQuery) ||
+           d.location.toLowerCase().contains(lowerQuery);
+  }).toList();
+});
+
+final nearbyDestinationsProvider = FutureProvider.family<List<Destination>, ({double lat, double lon})>((ref, coords) async {
+  final overpassService = ref.watch(overpassServiceProvider);
+  return overpassService.getNearbyPlaces(lat: coords.lat, lon: coords.lon);
 });

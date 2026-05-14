@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 import 'package:singgah/features/auth/presentation/screens/splash_screen.dart';
+import 'package:singgah/features/destination/domain/entities/destination.dart';
 import 'package:singgah/features/destination/presentation/screens/destination_detail_screen.dart';
 import 'package:singgah/features/destination/presentation/screens/explore_result_screen.dart';
 import 'package:singgah/features/destination/presentation/screens/explore_screen.dart';
@@ -45,7 +46,10 @@ final goRouter = GoRouter(
     ),
     GoRoute(
       path: '/destination-detail',
-      builder: (context, state) => const DestinationDetailScreen(),
+      builder: (context, state) {
+        final destination = state.extra as Destination?;
+        return DestinationDetailScreen(destination: destination);
+      },
     ),
     GoRoute(
       path: '/hotel-detail',

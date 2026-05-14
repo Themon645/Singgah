@@ -3,14 +3,33 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:singgah/features/destination/domain/entities/destination.dart';
 import 'package:singgah/features/trip/presentation/providers/trip_provider.dart';
+import 'package:singgah/features/destination/data/services/unsplash_service.dart';
 
 class DestinationDetailScreen extends ConsumerWidget {
-  const DestinationDetailScreen({super.key});
+  final Destination? destination;
+
+  const DestinationDetailScreen({super.key, this.destination});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+
+    // Jika destination null (fallback), gunakan data dummy
+    final currentDestination = destination ?? Destination(
+      id: 'dummy',
+      name: 'Lawangwangi Creative Space',
+      category: 'Wisata',
+      imageUrl: 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=800',
+      location: 'Dago, Bandung',
+      rating: 4.7,
+    );
+
+    // Ambil gambar dinamis dari Unsplash berdasarkan nama tempat
+    final unsplashImage = ref.watch(FutureProvider<String>((ref) async {
+      final service = ref.watch(unsplashServiceProvider);
+      return service.getImageUrlByQuery(currentDestination.name);
+    }));
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
@@ -21,95 +40,107 @@ class DestinationDetailScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Hero Image
+                // Hero Image Dinamis dari Unsplash
                 SizedBox(
-                  height: 320,
+                  height: 350,
                   width: double.infinity,
-                  child: Image.network(
-                    'https://lh3.googleusercontent.com/aida-public/AB6AXuDarE6j0SMbRGRu9RbmtXfab2wqdyTES-sCPMwkAcBrKK0iQYGHIrq0YdV6R1iA6WQf-_0_rKSRP7Chj4SJhrpKayggZaAFuQh983Yu8wGoJuAnvW7j_CV1hPFnL4x2xfDJzFhvhA1ZEgu3ihAY24o72pQbD-3EVAUf9i-6LBQsI2W8WkWJtn6lYHgq7KKxcM8kgLK1tk71Xm62LrBc8P8NMUWIsxJAqp_U0QyVPkIljHybtHPzFZAW73L-uxaPVuVR6tnbpQziQ_s',
-                    fit: BoxFit.cover,
+                  child: unsplashImage.when(
+                    data: (url) => Image.network(url, fit: BoxFit.cover),
+                    loading: () => Container(color: colorScheme.surfaceContainerHighest, child: const Center(child: CircularProgressIndicator())),
+                    error: (_, __) => Image.network(currentDestination.imageUrl, fit: BoxFit.cover),
                   ),
                 ),
                 
                 // Content Card
                 Transform.translate(
-                  offset: const Offset(0, -24),
+                  offset: const Offset(0, -32),
                   child: Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
                       color: colorScheme.surface,
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 20,
+                          offset: const Offset(0, -5),
+                        ),
+                      ],
                     ),
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(24),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Badges
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            _buildBadge(context, 'Seni & Budaya', colorScheme.primaryContainer.withOpacity(0.1), colorScheme.primary),
-                            const SizedBox(width: 8),
-                            _buildBadge(context, 'Buka', colorScheme.secondary.withOpacity(0.1), colorScheme.secondary),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Lawangwangi Creative Space',
-                          style: textTheme.headlineLarge?.copyWith(color: colorScheme.primary),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Icon(Icons.star, color: colorScheme.secondary, size: 18),
-                            const SizedBox(width: 4),
-                            Text('4.7', style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
-                            Text(' (1,240 ulasan)', style: textTheme.labelMedium),
-                            const SizedBox(width: 12),
-                            Text('•', style: TextStyle(color: colorScheme.outline)),
-                            const SizedBox(width: 12),
-                            Text('Dago, Bandung', style: textTheme.labelMedium?.copyWith(color: colorScheme.primary, fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-                        
-                        // Info Grid
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildInfoCard(context, Icons.schedule, 'JAM BUKA', '10:00 - 21:00'),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE8F0EA),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                currentDestination.category.toUpperCase(),
+                                style: textTheme.labelSmall?.copyWith(
+                                  color: const Color(0xFF1B4332),
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1,
+                                ),
+                              ),
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _buildInfoCard(context, Icons.payments_outlined, 'TIKET MASUK', 'Gratis'),
+                            Row(
+                              children: [
+                                const Icon(Icons.star, color: Colors.orange, size: 20),
+                                const SizedBox(width: 4),
+                                Text(
+                                  currentDestination.rating.toString(),
+                                  style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                        const SizedBox(height: 32),
-                        
-                        // Location
-                        Text('Lokasi', style: textTheme.titleLarge),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 20),
                         Text(
-                          'Jl. Dago Giri No.99, Mekarwangi, Kec. Lembang, Kabupaten Bandung Barat, Jawa Barat 40391',
-                          style: textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
-                        ),
-                        const SizedBox(height: 32),
-                        
-                        // Gallery
-                        Text('Galeri Foto', style: textTheme.titleLarge),
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          height: 100,
-                          child: ListView(
-                            scrollDirection: Axis.horizontal,
-                            children: [
-                              _buildGalleryImage('https://lh3.googleusercontent.com/aida-public/AB6AXuBGELuxyhWPHgA5K88MFDRDEwIbMDEpdXSvGnmJUttlNPRZMV6S267N0KPMJP5upgwP0Pw9LtKcdmCu-46Tjnftv2en1JfrpVRWna0tNofb9u3PymLTNMA1XHIU9xPWlZdKvlxi4H7kMoeB7QHbIvkQ488R_ZQJTnt-IB1BkekO_hD2VvxUv5S_8aYZGiEmfU4_T8x5xMZNBv3egHsdRZqDjCwLFCx5HkRoYsFhk1zbUvd_6ZNmIv_NHvoUfPSTnyrM2-1992adDDM'),
-                              const SizedBox(width: 12),
-                              _buildGalleryImage('https://lh3.googleusercontent.com/aida-public/AB6AXuBZvJKKmnS0k3-IOUclZmhfyBUL3DivzS3Agf-NZLWqBCmV-j4UaAdyBe4YEwcnXI9PvN9j0tShBJhEF7gbaTMwrP2EkJUoV1mle_WyRWdHLrmXOPPjJIaXNSgO4Au63MImfzVfqCHYlVXHfyeKE-EwH9t_Jet-pMhnF2qC9zQqFwUhQ-jfUwkAfN-4_zlNiAQvVKWm_pTkd6xtjw8tL_7E5PJ5rH5Xw7CCfbNmWgqNgzUDCnCPaIjwiTNw534aqyCD2T6OnuEFdqA'),
-                              const SizedBox(width: 12),
-                              _buildGalleryImage('https://lh3.googleusercontent.com/aida-public/AB6AXuDk7hqWXa3Ie05VbK80ahEms7d5H2W99Y0dgjSOKZSh5L1Q0oWyN7GcxyHeJ-zNNiGDliiIkiRfc8w3xCXd7WCNdCRDAdcdeIL46gE3tpB6Jax101haaG5au2ayhfIDx4uYRe-BoNBrsilReouHQbxFhZC7-BcmnlzQWvKPy21x5gCnIexQZ042WVWaAOGzkZ-DLBaMKOjNFT3qj8OWNbxeflny3cNu3ZHR6m69jq1CIFHcPnIwqnr1ty_pIYJ-dm5GYdwiL4bo7iU'),
-                            ],
+                          currentDestination.name,
+                          style: textTheme.headlineLarge?.copyWith(
+                            color: const Color(0xFF1B4332),
+                            fontWeight: FontWeight.bold,
                           ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(Icons.location_on, color: colorScheme.primary, size: 18),
+                            const SizedBox(width: 4),
+                            Text(
+                              currentDestination.location,
+                              style: textTheme.bodyLarge?.copyWith(color: colorScheme.onSurfaceVariant),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 32),
+                        
+                        Text('Tentang Destinasi', style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Nikmati keindahan dan suasana unik di ${currentDestination.name}. Tempat ini merupakan salah satu destinasi terpopuler di ${currentDestination.location} yang menawarkan pengalaman tak terlupakan bagi setiap pengunjungnya.',
+                          style: textTheme.bodyLarge?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                            height: 1.6,
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                        
+                        Text('Informasi Penting', style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(child: _buildInfoCard(context, Icons.access_time, 'Jam Buka', '09:00 - 20:00')),
+                            const SizedBox(width: 16),
+                            Expanded(child: _buildInfoCard(context, Icons.confirmation_number_outlined, 'Tiket', 'Mulai Rp 25k')),
+                          ],
                         ),
                         const SizedBox(height: 120),
                       ],
@@ -120,20 +151,20 @@ class DestinationDetailScreen extends ConsumerWidget {
             ),
           ),
           
-          // Back Button Overlay
+          // Back Button
           Positioned(
-            top: 40,
+            top: 48,
             left: 20,
             child: CircleAvatar(
-              backgroundColor: Colors.white.withOpacity(0.3),
+              backgroundColor: Colors.white,
               child: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                icon: const Icon(Icons.arrow_back, color: Color(0xFF1B4332)),
                 onPressed: () => context.pop(),
               ),
             ),
           ),
           
-          // Sticky Footer
+          // Footer Button
           Positioned(
             bottom: 0,
             left: 0,
@@ -142,16 +173,24 @@ class DestinationDetailScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.white,
-                border: Border(top: BorderSide(color: colorScheme.outlineVariant)),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -5)),
+                ],
               ),
               child: ElevatedButton(
-                onPressed: () => _showTripPicker(context, ref),
-                child: Row(
+                onPressed: () => _showTripPicker(context, ref, currentDestination),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1B4332),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.add_circle_outline),
-                    const SizedBox(width: 8),
-                    const Text('Tambah ke trip'),
+                    Icon(Icons.add_location_alt_outlined),
+                    const SizedBox(width: 12),
+                    Text('Tambah ke Rencana Perjalanan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                   ],
                 ),
               ),
@@ -162,23 +201,40 @@ class DestinationDetailScreen extends ConsumerWidget {
     );
   }
 
-  void _showTripPicker(BuildContext context, WidgetRef ref) {
-    final trips = ref.read(tripsProvider);
-    final colorScheme = Theme.of(context).colorScheme;
+  Widget _buildInfoCard(BuildContext context, IconData icon, String label, String value) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0F5F2),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: const Color(0xFF1B4332), size: 24),
+          const SizedBox(height: 8),
+          Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+        ],
+      ),
+    );
+  }
 
+  void _showTripPicker(BuildContext context, WidgetRef ref, Destination destination) {
+    final trips = ref.read(tripsProvider);
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
       builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Pilih Trip', style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 16),
+            const Text('Pilih Rencana Trip', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 24),
             if (trips.isEmpty)
-              const Center(child: Text('Belum ada trip. Buat trip baru terlebih dahulu.'))
+              const Center(child: Text('Anda belum memiliki rencana trip.'))
             else
               Flexible(
                 child: ListView.builder(
@@ -187,26 +243,17 @@ class DestinationDetailScreen extends ConsumerWidget {
                   itemBuilder: (context, index) {
                     final trip = trips[index];
                     return ListTile(
-                      leading: Icon(Icons.map, color: colorScheme.primary),
-                      title: Text(trip.name),
-                      subtitle: Text('${trip.destination}'),
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.map, color: Color(0xFF1B4332)),
+                      title: Text(trip.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Text(trip.destination),
+                      trailing: const Icon(Icons.add_circle, color: Color(0xFF1B4332)),
                       onTap: () async {
-                        final destination = Destination(
-                          id: DateTime.now().millisecondsSinceEpoch.toString(),
-                          name: 'Lawangwangi Creative Space',
-                          category: 'Seni & Budaya',
-                          imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAQo7_HSG3eBYkqW50ytifCeGAESXoNtnSI_im9MPtww6glvtWDbg-VRWSTcTQMMgoCcCp34Ai1gV3AnUBx9EBgYSWwlqU8xzRDNdrlZYV9jygyCblpdkPOiRYufPrQq7qQG6OFb5AcjSNVw3YT9sP4cxXhRqOfdZUOHY2WUeAfuoPYnzxYzTS3ECAkU5yOShHyI7dzC6fimLr0pJLXcyc7u67awT2pHJm51Y4nmjP3lrdgOb3PIbfA-A0t4gQ3Tg7JXKzRD9XmgJ8',
-                          location: 'Dago, Bandung',
-                          latitude: -6.845585,
-                          longitude: 107.618685,
-                        );
-                        
                         await ref.read(tripsProvider.notifier).addDestinationToTrip(trip.id, destination);
-                        
                         if (context.mounted) {
                           Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Berhasil ditambahkan ke trip ${trip.name}')),
+                            SnackBar(content: Text('${destination.name} berhasil ditambahkan ke ${trip.name}')),
                           );
                         }
                       },
@@ -214,54 +261,9 @@ class DestinationDetailScreen extends ConsumerWidget {
                   },
                 ),
               ),
-            const SizedBox(height: 24),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildBadge(BuildContext context, String label, Color bgColor, Color textColor) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 11),
-      ),
-    );
-  }
-
-  Widget _buildInfoCard(BuildContext context, IconData icon, String label, String value) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceVariant.withOpacity(0.3),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colorScheme.outlineVariant.withOpacity(0.5)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: colorScheme.primary, size: 24),
-          const SizedBox(height: 8),
-          Text(label, style: textTheme.labelSmall?.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 2),
-          Text(value, style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGalleryImage(String url) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: Image.network(url, width: 140, height: 100, fit: BoxFit.cover),
     );
   }
 }

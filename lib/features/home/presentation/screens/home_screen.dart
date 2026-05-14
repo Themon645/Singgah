@@ -5,6 +5,7 @@ import 'package:singgah/features/home/domain/services/travel_reminder_service.da
 import 'package:singgah/features/home/presentation/widgets/travel_reminder_list_widget.dart';
 import 'package:singgah/features/trip/domain/entities/trip.dart';
 import 'package:singgah/features/trip/presentation/providers/trip_provider.dart';
+import 'package:singgah/features/destination/presentation/providers/destination_provider.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -159,6 +160,8 @@ class HomeScreen extends ConsumerWidget {
                 child: TravelReminderListWidget(reminders: reminderItems),
               ),
               const SizedBox(height: 32),
+              _buildNearbySection(context, ref),
+              const SizedBox(height: 32),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
@@ -201,6 +204,8 @@ class HomeScreen extends ConsumerWidget {
                   ],
                 ),
               ),
+              const SizedBox(height: 32),
+              _buildNearbySection(context, ref),
               const SizedBox(height: 32),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -313,6 +318,11 @@ class HomeScreen extends ConsumerWidget {
                 height: 120,
                 width: double.infinity,
                 fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  height: 120,
+                  color: colorScheme.surfaceContainerHighest,
+                  child: const Icon(Icons.image_not_supported),
+                ),
               ),
             ),
             Padding(
@@ -320,14 +330,73 @@ class HomeScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: textTheme.titleLarge),
-                  Text(subtitle, style: textTheme.labelMedium),
+                  Text(title, style: textTheme.titleLarge, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(subtitle, style: textTheme.labelMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
                 ],
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildNearbySection(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    
+    // Mock koordinat Jakarta untuk contoh. Bisa diganti dengan geolocator nantinya.
+    final nearbyPlaces = ref.watch(nearbyDestinationsProvider((lat: -6.2088, lon: 106.8456)));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Tempat menarik di sekitarmu', style: textTheme.headlineMedium),
+              Icon(Icons.near_me, size: 18, color: colorScheme.primary),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 220,
+          child: nearbyPlaces.when(
+            data: (places) {
+              if (places.isEmpty) {
+                return Center(child: Text('Tidak ada tempat ditemukan', style: textTheme.bodyMedium));
+              }
+              return ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                itemCount: places.length,
+                itemBuilder: (context, index) {
+                  final place = places[index];
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 16),
+                    child: _buildInspirationCard(
+                      context,
+                      place.name,
+                      place.category,
+                      place.imageUrl,
+                    ),
+                  );
+                },
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (err, stack) => Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 40),
+                child: Text('Gagal memuat data: $err', textAlign: TextAlign.center),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
