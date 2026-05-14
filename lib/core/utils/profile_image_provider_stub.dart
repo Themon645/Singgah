@@ -1,0 +1,8 @@
+import 'package:flutter/material.dart';
+
+const String defaultProfileImageUrl =
+    'https://lh3.googleusercontent.com/aida-public/AB6AXuB5AsiTxwB6bpIEGCHsmp5dnZw2d64UIR6yTTwDPawcKYo2V7bxoCWT6JkHRVN_jPDHlWt3CBHyNpVtZM2esuYHNJwpYbiGN6vw3bRbwonIenxkGOCzaWQvAOYgwoWg0bBC3Z1a5N7gfEFTok-q9Va_UnMuDEjhfS8otX4YSozVaVmPGPx2gAQF18lC8lXRA0QYWPSHCe-uRLXe2IQkKKsbcZIMm8gKVT4MUYmEq5K5MaovJRg2pf_pa5YAPPslaDfuTXi2hUW6CJw';
+
+ImageProvider buildProfileImage(String? profilePicture) {
+  return const NetworkImage(defaultProfileImageUrl);
+}
