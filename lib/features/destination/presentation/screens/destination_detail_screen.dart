@@ -25,11 +25,8 @@ class DestinationDetailScreen extends ConsumerWidget {
       rating: 4.7,
     );
 
-    // Ambil gambar dinamis dari Unsplash berdasarkan nama tempat
-    final unsplashImage = ref.watch(FutureProvider<String>((ref) async {
-      final service = ref.watch(unsplashServiceProvider);
-      return service.getImageUrlByQuery(currentDestination.name);
-    }));
+    // Ambil gambar dinamis HANYA jika imageUrl adalah placeholder
+    final bool isPlaceholder = currentDestination.imageUrl.contains('unsplash.com') || currentDestination.imageUrl.contains('loremflickr.com');
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
@@ -40,15 +37,29 @@ class DestinationDetailScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Hero Image Dinamis dari Unsplash
+                // Hero Image
                 SizedBox(
                   height: 350,
                   width: double.infinity,
-                  child: unsplashImage.when(
-                    data: (url) => Image.network(url, fit: BoxFit.cover),
-                    loading: () => Container(color: colorScheme.surfaceContainerHighest, child: const Center(child: CircularProgressIndicator())),
-                    error: (_, __) => Image.network(currentDestination.imageUrl, fit: BoxFit.cover),
-                  ),
+                  child: isPlaceholder 
+                    ? Consumer(
+                        builder: (context, ref, child) {
+                          final unsplashAsync = ref.watch(FutureProvider<String>((ref) async {
+                            final service = ref.watch(unsplashServiceProvider);
+                            return service.getImageUrlByQuery('${currentDestination.name} ${currentDestination.location}');
+                          }));
+                          return unsplashAsync.when(
+                            data: (url) => Image.network(url, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildFallbackImage(currentDestination)),
+                            loading: () => _buildFallbackImage(currentDestination, showLoading: true),
+                            error: (_, __) => _buildFallbackImage(currentDestination),
+                          );
+                        },
+                      )
+                    : Image.network(
+                        currentDestination.imageUrl, 
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _buildFallbackImage(currentDestination),
+                      ),
                 ),
                 
                 // Content Card
@@ -61,7 +72,7 @@ class DestinationDetailScreen extends ConsumerWidget {
                       borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
+                          color: Colors.black.withOpacity(0.1),
                           blurRadius: 20,
                           offset: const Offset(0, -5),
                         ),
@@ -94,7 +105,7 @@ class DestinationDetailScreen extends ConsumerWidget {
                                 const Icon(Icons.star, color: Colors.orange, size: 20),
                                 const SizedBox(width: 4),
                                 Text(
-                                  currentDestination.rating.toString(),
+                                  currentDestination.rating.toStringAsFixed(1),
                                   style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                                 ),
                               ],
@@ -114,9 +125,13 @@ class DestinationDetailScreen extends ConsumerWidget {
                           children: [
                             Icon(Icons.location_on, color: colorScheme.primary, size: 18),
                             const SizedBox(width: 4),
-                            Text(
-                              currentDestination.location,
-                              style: textTheme.bodyLarge?.copyWith(color: colorScheme.onSurfaceVariant),
+                            Expanded(
+                              child: Text(
+                                currentDestination.location,
+                                style: textTheme.bodyLarge?.copyWith(color: colorScheme.onSurfaceVariant),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                           ],
                         ),
@@ -125,7 +140,7 @@ class DestinationDetailScreen extends ConsumerWidget {
                         Text('Tentang Destinasi', style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
                         const SizedBox(height: 12),
                         Text(
-                          'Nikmati keindahan dan suasana unik di ${currentDestination.name}. Tempat ini merupakan salah satu destinasi terpopuler di ${currentDestination.location} yang menawarkan pengalaman tak terlupakan bagi setiap pengunjungnya.',
+                          _generateDescription(currentDestination),
                           style: textTheme.bodyLarge?.copyWith(
                             color: colorScheme.onSurfaceVariant,
                             height: 1.6,
@@ -137,9 +152,9 @@ class DestinationDetailScreen extends ConsumerWidget {
                         const SizedBox(height: 16),
                         Row(
                           children: [
-                            Expanded(child: _buildInfoCard(context, Icons.access_time, 'Jam Buka', '09:00 - 20:00')),
+                            Expanded(child: _buildInfoCard(context, Icons.access_time, 'Info', _getOpeningHours(currentDestination))),
                             const SizedBox(width: 16),
-                            Expanded(child: _buildInfoCard(context, Icons.confirmation_number_outlined, 'Tiket', 'Mulai Rp 25k')),
+                            Expanded(child: _buildInfoCard(context, Icons.confirmation_number_outlined, 'Estimasi', _getPricing(currentDestination))),
                           ],
                         ),
                         const SizedBox(height: 120),
@@ -174,7 +189,7 @@ class DestinationDetailScreen extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -5)),
+                  BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5)),
                 ],
               ),
               child: ElevatedButton(
@@ -201,6 +216,41 @@ class DestinationDetailScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildFallbackImage(Destination dest, {bool showLoading = false}) {
+    return Stack(
+      children: [
+        Image.network(dest.imageUrl, fit: BoxFit.cover, width: double.infinity, height: double.infinity),
+        if (showLoading)
+          const Center(child: CircularProgressIndicator(color: Colors.white)),
+      ],
+    );
+  }
+
+  String _generateDescription(Destination dest) {
+    if (dest.category == 'Hotel') {
+      return '${dest.name} adalah pilihan akomodasi populer di ${dest.location}. Hotel ini dikenal dengan pelayanannya yang ramah dan suasana yang tenang, sangat cocok untuk perjalanan bisnis maupun liburan keluarga.';
+    } else if (dest.category == 'Cafe') {
+      return '${dest.name} menawarkan pengalaman kuliner yang unik di ${dest.location}. Dengan desain interior yang estetik dan pilihan menu yang beragam, tempat ini menjadi favorit bagi warga lokal maupun wisatawan.';
+    } else if (dest.category == 'Belanja') {
+      return '${dest.name} merupakan pusat perbelanjaan yang lengkap di ${dest.location}. Anda bisa menemukan berbagai kebutuhan mulai dari fashion, kuliner, hingga hiburan dalam satu tempat.';
+    }
+    return 'Nikmati keindahan dan suasana unik di ${dest.name}. Tempat ini merupakan salah satu destinasi terpopuler di ${dest.location} yang menawarkan pengalaman tak terlupakan bagi setiap pengunjungnya.';
+  }
+
+  String _getOpeningHours(Destination dest) {
+    final int seed = dest.id.hashCode;
+    if (dest.category == 'Hotel') return 'Check-in 14:00';
+    if (dest.category == 'Cafe') return '${8 + (seed % 3)}:00 - ${21 + (seed % 3)}:00';
+    return '${9 + (seed % 2)}:00 - ${17 + (seed % 4)}:00';
+  }
+
+  String _getPricing(Destination dest) {
+    final int seed = dest.id.hashCode;
+    if (dest.category == 'Hotel') return 'Rp ${(400 + (seed % 10) * 100)}rb /mlm';
+    if (dest.category == 'Cafe') return 'Rp ${(25 + (seed % 5) * 10)}rb - ${(100 + (seed % 10) * 20)}rb';
+    return 'Rp ${(15 + (seed % 8) * 5)}rb - ${(75 + (seed % 5) * 10)}rb';
+  }
+
   Widget _buildInfoCard(BuildContext context, IconData icon, String label, String value) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -214,7 +264,7 @@ class DestinationDetailScreen extends ConsumerWidget {
           Icon(icon, color: const Color(0xFF1B4332), size: 24),
           const SizedBox(height: 8),
           Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
         ],
       ),
     );

@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:singgah/features/destination/domain/entities/destination.dart';
 import 'package:singgah/features/destination/data/services/overpass_service.dart';
+import 'package:singgah/features/destination/data/services/google_places_service.dart';
+import 'package:singgah/features/destination/data/services/tripadvisor_service.dart';
 
 final destinationsProvider = Provider<List<Destination>>((ref) {
   return [
@@ -79,11 +81,19 @@ final destinationsProvider = Provider<List<Destination>>((ref) {
 final searchDestinationsProvider = Provider.family<List<Destination>, String>((ref, query) {
   final allDestinations = ref.watch(destinationsProvider);
   final nearbyAsync = ref.watch(nearbyDestinationsProvider((lat: -6.2088, lon: 106.8456)));
+  final googleHotelsAsync = ref.watch(googleHotelsProvider((lat: -6.2088, lon: 106.8456)));
   
   List<Destination> combinedList = [...allDestinations];
+  
   nearbyAsync.whenData((places) {
     for (var place in places) {
       if (!combinedList.any((d) => d.id == place.id)) combinedList.add(place);
+    }
+  });
+
+  googleHotelsAsync.whenData((hotels) {
+    for (var hotel in hotels) {
+      if (!combinedList.any((d) => d.id == hotel.id)) combinedList.add(hotel);
     }
   });
 
@@ -100,4 +110,58 @@ final searchDestinationsProvider = Provider.family<List<Destination>, String>((r
 final nearbyDestinationsProvider = FutureProvider.family<List<Destination>, ({double lat, double lon})>((ref, coords) async {
   final overpassService = ref.watch(overpassServiceProvider);
   return overpassService.getNearbyPlaces(lat: coords.lat, lon: coords.lon);
+});
+
+// Daftarkan Service baru
+final googlePlacesServiceProvider = Provider((ref) => GooglePlacesService(ref.watch(dioProvider)));
+final tripAdvisorServiceProvider = Provider((ref) => TripAdvisorService(ref.watch(dioProvider)));
+
+// Provider untuk mengambil data HOTEL dari Google
+final googleHotelsProvider = FutureProvider.family<List<Destination>, ({double lat, double lon})>((ref, coords) async {
+  final service = ref.watch(googlePlacesServiceProvider);
+  return service.getNearbyPlaces(
+    lat: coords.lat, 
+    lon: coords.lon, 
+    type: 'lodging', 
+    categoryName: 'Hotel'
+  );
+});
+
+// Provider untuk mengambil data WISATA dari Google
+final googleWisataProvider = FutureProvider.family<List<Destination>, ({double lat, double lon})>((ref, coords) async {
+  final service = ref.watch(googlePlacesServiceProvider);
+  return service.getNearbyPlaces(
+    lat: coords.lat, 
+    lon: coords.lon, 
+    type: 'tourist_attraction', 
+    categoryName: 'Wisata'
+  );
+});
+
+// Provider untuk mengambil data CAFE dari Google
+final googleCafeProvider = FutureProvider.family<List<Destination>, ({double lat, double lon})>((ref, coords) async {
+  final service = ref.watch(googlePlacesServiceProvider);
+  return service.getNearbyPlaces(
+    lat: coords.lat, 
+    lon: coords.lon, 
+    type: 'cafe', 
+    categoryName: 'Cafe'
+  );
+});
+
+// Provider untuk mengambil data BELANJA dari Google
+final googleShopProvider = FutureProvider.family<List<Destination>, ({double lat, double lon})>((ref, coords) async {
+  final service = ref.watch(googlePlacesServiceProvider);
+  return service.getNearbyPlaces(
+    lat: coords.lat, 
+    lon: coords.lon, 
+    type: 'shopping_mall', 
+    categoryName: 'Belanja'
+  );
+});
+
+// Provider untuk TripAdvisor (berdasarkan query teks)
+final tripAdvisorHotelsProvider = FutureProvider.family<List<Destination>, String>((ref, query) async {
+  final service = ref.watch(tripAdvisorServiceProvider);
+  return service.searchHotels(query);
 });

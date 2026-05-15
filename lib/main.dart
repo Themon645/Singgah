@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:singgah/app/router.dart';
 import 'package:singgah/app/theme.dart';
@@ -10,6 +11,10 @@ import 'package:singgah/features/trip/domain/entities/trip.dart';
 void main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
+    
+    // Load environment variables
+    await dotenv.load(fileName: ".env");
+    debugPrint("Dotenv loaded. Google Key: ${dotenv.env['GOOGLE_PLACES_API_KEY']?.substring(0, 5)}...");
     
     // Initialize Hive
     await Hive.initFlutter();

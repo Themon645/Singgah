@@ -254,7 +254,7 @@ class _ExploreResultScreenState extends ConsumerState<ExploreResultScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return InkWell(
-      onTap: () => context.push('/destination-detail'),
+      onTap: () => context.push('/destination-detail', extra: destination),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(12),
@@ -307,7 +307,7 @@ class _ExploreResultScreenState extends ConsumerState<ExploreResultScreen> {
 
   Widget _buildTrendingCard(Destination destination) {
     return InkWell(
-      onTap: () => context.push('/destination-detail'),
+      onTap: () => context.push('/destination-detail', extra: destination),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: Stack(

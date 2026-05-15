@@ -1,9 +1,10 @@
 import 'package:dio/dio.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../../domain/entities/destination.dart';
 
 class TripAdvisorService {
   final Dio _dio;
-  final String _apiKey = 'YOUR_RAPIDAPI_KEY';
+  final String _apiKey = dotenv.get('RAPID_API_KEY', fallback: '');
 
   TripAdvisorService(this._dio);
 
