@@ -84,7 +84,7 @@ class TripNotifier extends StateNotifier<List<Trip>> {
     }
   }
 
-  Future<void> updateDestination(String tripId, String destinationId, {String? arrivalTime, String? departureTime}) async {
+  Future<void> updateDestination(String tripId, String destinationId, {String? arrivalTime, String? departureTime, int? visitDay}) async {
     final trip = _box.get(tripId);
     if (trip != null) {
       final updatedItinerary = trip.itinerary.map((dest) {
@@ -100,6 +100,7 @@ class TripNotifier extends StateNotifier<List<Trip>> {
             departureTime: departureTime ?? dest.departureTime,
             latitude: dest.latitude,
             longitude: dest.longitude,
+            visitDay: visitDay ?? dest.visitDay,
           );
         }
         return dest;

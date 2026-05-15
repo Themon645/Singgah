@@ -34,6 +34,9 @@ class Destination extends HiveObject {
   @HiveField(9)
   final double? longitude;
 
+  @HiveField(10)
+  final int visitDay;
+
   Destination({
     required this.id,
     required this.name,
@@ -45,5 +48,6 @@ class Destination extends HiveObject {
     this.departureTime,
     this.latitude,
     this.longitude,
+    this.visitDay = 1,
   });
 }

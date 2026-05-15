@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:singgah/features/destination/domain/entities/destination.dart';
+import 'package:singgah/features/destination/presentation/providers/destination_provider.dart';
 import 'package:singgah/features/trip/domain/entities/trip.dart';
 import 'package:singgah/features/trip/presentation/providers/trip_provider.dart';
 
@@ -14,19 +16,34 @@ class CreateTripScreen extends ConsumerStatefulWidget {
 
 class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
   int _currentStep = 1;
-  final int _totalSteps = 4;
+  final int _totalSteps = 5;
 
   // Form State
   final _nameController = TextEditingController();
+  final _searchPlaceController = TextEditingController();
   String _origin = 'Jakarta';
   String _destination = 'Bandung';
-  DateTime _startDate = DateTime(2026, 6, 12);
-  DateTime _endDate = DateTime(2026, 6, 14);
+  DateTime _startDate = DateTime.now();
+  DateTime _endDate = DateTime.now().add(const Duration(days: 2));
   String _vehicleType = 'Mobil';
+  final List<Destination> _selectedDestinations = [];
+  String _activeCategory = 'Semua';
+
+  // City Coordinates mapping for API
+  final Map<String, ({double lat, double lon})> _cityCoords = {
+    'Jakarta': (lat: -6.2088, lon: 106.8456),
+    'Bandung': (lat: -6.9175, lon: 107.6191),
+    'Yogyakarta': (lat: -7.7956, lon: 110.3695),
+    'Bali': (lat: -8.3405, lon: 115.0920),
+    'Malang': (lat: -7.9839, lon: 112.6214),
+    'Surabaya': (lat: -7.2575, lon: 112.7521),
+    'Semarang': (lat: -7.0051, lon: 110.4381),
+  };
 
   @override
   void dispose() {
     _nameController.dispose();
+    _searchPlaceController.dispose();
     super.dispose();
   }
 
@@ -39,10 +56,11 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
       startDate: _startDate,
       endDate: _endDate,
       vehicleType: _vehicleType,
+      itinerary: _selectedDestinations,
     );
 
     ref.read(tripsProvider.notifier).addTrip(newTrip);
-    _showSuccessDialog();
+    _showSuccessDialog(newTrip.id);
   }
 
   @override
@@ -53,9 +71,11 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
+        backgroundColor: colorScheme.surface,
+        elevation: 0,
         leading: IconButton(
           icon: Icon(_currentStep == 1 ? Icons.close : Icons.arrow_back, 
-                color: colorScheme.onSurfaceVariant),
+                color: const Color(0xFF1B4332)),
           onPressed: () {
             if (_currentStep == 1) {
               context.pop();
@@ -66,7 +86,7 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
         ),
         title: Column(
           children: [
-            Text('Trip baru', style: textTheme.titleLarge),
+            Text('Trip baru', style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Row(
               mainAxisSize: MainAxisSize.min,
@@ -78,7 +98,7 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
                   height: 6,
                   margin: const EdgeInsets.symmetric(horizontal: 2),
                   decoration: BoxDecoration(
-                    color: isActive ? colorScheme.primary : colorScheme.outlineVariant,
+                    color: isActive ? const Color(0xFF1B4332) : colorScheme.outlineVariant,
                     borderRadius: BorderRadius.circular(3),
                   ),
                 );
@@ -89,19 +109,29 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
         centerTitle: true,
       ),
       body: _buildStepContent(),
-      bottomNavigationBar: _currentStep < 5 ? Padding(
-        padding: const EdgeInsets.all(20.0),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -5))],
+        ),
         child: ElevatedButton(
           onPressed: () {
-            if (_currentStep < 4) {
+            if (_currentStep < 5) {
               setState(() => _currentStep++);
             } else {
               _handleCreateTrip();
             }
           },
-          child: Text(_currentStep == 4 ? 'Buat trip' : 'Lanjut'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF1B4332),
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          ),
+          child: Text(_currentStep == 5 ? 'Selesaikan Rencana' : 'Lanjut'),
         ),
-      ) : null,
+      ),
     );
   }
 
@@ -111,6 +141,7 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
       case 2: return _buildStep2();
       case 3: return _buildStep3();
       case 4: return _buildStep4();
+      case 5: return _buildStep5();
       default: return const SizedBox();
     }
   }
@@ -122,18 +153,17 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Beri nama tripmu.', style: textTheme.headlineLarge),
+          Text('Beri nama tripmu.', style: textTheme.headlineLarge?.copyWith(color: const Color(0xFF1B4332), fontWeight: FontWeight.bold)),
           const SizedBox(height: 32),
           TextField(
             controller: _nameController,
             autofocus: true,
             style: textTheme.headlineMedium,
             decoration: const InputDecoration(
-              hintText: 'Weekend di Bandung',
+              hintText: 'Misal: Liburan Seru di Bali',
               border: InputBorder.none,
-              enabledBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.green, width: 2),
-              ),
+              enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF1B4332), width: 2)),
+              focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF1B4332), width: 3)),
             ),
           ),
         ],
@@ -149,103 +179,42 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Dari mana, ke mana?', style: textTheme.headlineLarge),
+          Text('Tentukan tujuan.', style: textTheme.headlineLarge?.copyWith(color: const Color(0xFF1B4332), fontWeight: FontWeight.bold)),
           const SizedBox(height: 32),
-          Stack(
-            alignment: Alignment.centerRight,
-            children: [
-              Column(
-                children: [
-                  _buildLocationCard(
-                    label: 'Dari',
-                    value: _origin,
-                    icon: Icons.trip_origin,
-                    onTap: () => _showLocationPicker('Dari'),
-                  ),
-                  const SizedBox(height: 8),
-                  _buildLocationCard(
-                    label: 'Ke',
-                    value: _destination,
-                    icon: Icons.location_on,
-                    onTap: () => _showLocationPicker('Ke'),
-                  ),
-                ],
-              ),
-              Padding(
-                padding: const EdgeInsets.only(right: 16),
-                child: IconButton.filled(
-                  onPressed: () {
-                    setState(() {
-                      final temp = _origin;
-                      _origin = _destination;
-                      _destination = temp;
-                    });
-                  },
-                  icon: const Icon(Icons.swap_vert),
-                  style: IconButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: colorScheme.primary,
-                    side: BorderSide(color: colorScheme.outlineVariant),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 32),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: colorScheme.primaryContainer.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: colorScheme.primaryContainer.withOpacity(0.2)),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline, color: colorScheme.primary, size: 20),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Rute ini biasanya memakan waktu 3 jam via jalan tol Cipularang.',
-                    style: textTheme.labelMedium?.copyWith(color: colorScheme.primary),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          _buildLocationCard(label: 'Dari Mana', value: _origin, icon: Icons.trip_origin, onTap: () => _showLocationPicker('Dari')),
+          const SizedBox(height: 12),
+          Center(child: Icon(Icons.arrow_downward, color: colorScheme.outlineVariant)),
+          const SizedBox(height: 12),
+          _buildLocationCard(label: 'Tujuan Ke', value: _destination, icon: Icons.location_on, onTap: () => _showLocationPicker('Ke')),
         ],
       ),
     );
   }
 
-  Widget _buildLocationCard({
-    required String label,
-    required String value,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
+  Widget _buildLocationCard({required String label, required String value, required IconData icon, required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: colorScheme.surfaceVariant.withOpacity(0.3),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: colorScheme.outlineVariant),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
         ),
         child: Row(
           children: [
-            Icon(icon, color: colorScheme.primary),
-            const SizedBox(width: 12),
+            Icon(icon, color: const Color(0xFF1B4332)),
+            const SizedBox(width: 16),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: textTheme.labelSmall),
-                Text(value, style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
+                Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
               ],
             ),
+            const Spacer(),
+            const Icon(Icons.expand_more, color: Colors.grey),
           ],
         ),
       ),
@@ -253,144 +222,76 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
   }
 
   void _showLocationPicker(String type) {
-    final cities = ['Jakarta', 'Bandung', 'Yogyakarta', 'Bali', 'Malang', 'Surabaya', 'Semarang'];
-    
+    final cities = _cityCoords.keys.toList();
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Pilih Kota $type', style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 16),
-              Flexible(
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: cities.length,
-                  itemBuilder: (context, index) {
-                    return ListTile(
-                      title: Text(cities[index]),
-                      onTap: () {
-                        setState(() {
-                          if (type == 'Dari') {
-                            _origin = cities[index];
-                          } else {
-                            _destination = cities[index];
-                          }
-                        });
-                        Navigator.pop(context);
-                      },
-                    );
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Pilih Kota $type', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: cities.length,
+                itemBuilder: (context, index) => ListTile(
+                  title: Text(cities[index], style: const TextStyle(fontSize: 16)),
+                  onTap: () {
+                    setState(() {
+                      if (type == 'Dari') _origin = cities[index];
+                      else _destination = cities[index];
+                    });
+                    Navigator.pop(context);
                   },
                 ),
               ),
-            ],
-          ),
-        );
-      },
+            ),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _buildStep3() {
     final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
     final dateFormat = DateFormat('dd MMM yyyy');
-
     return Padding(
       padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Kapan kamu pergi?', style: textTheme.headlineLarge),
+          Text('Atur waktu.', style: textTheme.headlineLarge?.copyWith(color: const Color(0xFF1B4332), fontWeight: FontWeight.bold)),
           const SizedBox(height: 32),
-          
-          // Start Date Card
-          _buildDateCard(
-            label: 'Tanggal Mulai',
-            value: dateFormat.format(_startDate),
-            icon: Icons.calendar_today,
-            onTap: () => _selectDateRange(context),
-          ),
-          const SizedBox(height: 16),
-          
-          // End Date Card
-          _buildDateCard(
-            label: 'Tanggal Selesai',
-            value: dateFormat.format(_endDate),
-            icon: Icons.event,
-            onTap: () => _selectDateRange(context),
-          ),
-          
-          const SizedBox(height: 32),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: colorScheme.primaryContainer.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: colorScheme.primaryContainer.withValues(alpha: 0.2)),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline, color: colorScheme.primary, size: 20),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Durasi perjalanan: ${_endDate.difference(_startDate).inDays + 1} hari',
-                    style: textTheme.labelMedium?.copyWith(color: colorScheme.primary, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Spacer(),
-          Text(
-            'Tips: Pilih rentang tanggal untuk menyusun rencana harian yang lebih akurat.',
-            style: textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
-            textAlign: TextAlign.center,
-          ),
+          _buildDateCard(label: 'Durasi Perjalanan', value: '${dateFormat.format(_startDate)} - ${dateFormat.format(_endDate)}', onTap: () => _selectDateRange(context)),
+          const SizedBox(height: 24),
+          Text('Total: ${_endDate.difference(_startDate).inDays + 1} Hari', style: textTheme.titleMedium?.copyWith(color: const Color(0xFF1B4332), fontWeight: FontWeight.bold)),
         ],
       ),
     );
   }
 
-  Widget _buildDateCard({
-    required String label,
-    required String value,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
+  Widget _buildDateCard({required String label, required String value, required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: colorScheme.outlineVariant),
-        ),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(color: const Color(0xFFF0F5F2), borderRadius: BorderRadius.circular(16)),
         child: Row(
           children: [
-            Icon(icon, color: colorScheme.primary),
+            const Icon(Icons.calendar_month, color: Color(0xFF1B4332)),
             const SizedBox(width: 16),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: textTheme.labelSmall),
-                Text(value, style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
+                Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               ],
             ),
-            const Spacer(),
-            Icon(Icons.edit_calendar_outlined, color: colorScheme.outline, size: 20),
           ],
         ),
       ),
@@ -398,124 +299,163 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
   }
 
   Future<void> _selectDateRange(BuildContext context) async {
-    final colorScheme = Theme.of(context).colorScheme;
-    final DateTimeRange? picked = await showDateRangePicker(
+    final picked = await showDateRangePicker(
       context: context,
-      initialDateRange: DateTimeRange(start: _startDate, end: _endDate),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: colorScheme.copyWith(
-              primary: colorScheme.primary,
-              onPrimary: Colors.white,
-            ),
-          ),
-          child: child!,
-        );
-      },
+      initialDateRange: DateTimeRange(start: _startDate, end: _endDate),
     );
-
-    if (picked != null) {
-      setState(() {
-        _startDate = picked.start;
-        _endDate = picked.end;
-      });
-    }
+    if (picked != null) setState(() { _startDate = picked.start; _endDate = picked.end; });
   }
 
   Widget _buildStep4() {
-    final textTheme = Theme.of(context).textTheme;
     return Padding(
       padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Pakai kendaraan apa?', style: textTheme.headlineLarge),
+          const Text('Pilih kendaraan.', style: TextStyle(fontSize: 32, color: Color(0xFF1B4332), fontWeight: FontWeight.bold)),
           const SizedBox(height: 32),
-          InkWell(
-            onTap: () => setState(() => _vehicleType = 'Motor'),
-            child: _buildVehicleOption(Icons.motorcycle, 'Motor', _vehicleType == 'Motor'),
-          ),
+          _buildVehicleOption(Icons.directions_car, 'Mobil', _vehicleType == 'Mobil'),
           const SizedBox(height: 16),
-          InkWell(
-            onTap: () => setState(() => _vehicleType = 'Mobil'),
-            child: _buildVehicleOption(Icons.directions_car, 'Mobil', _vehicleType == 'Mobil'),
-          ),
+          _buildVehicleOption(Icons.motorcycle, 'Motor', _vehicleType == 'Motor'),
         ],
       ),
     );
   }
 
   Widget _buildVehicleOption(IconData icon, String label, bool isSelected) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: isSelected ? colorScheme.surfaceVariant.withOpacity(0.3) : colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isSelected ? colorScheme.primary : colorScheme.outlineVariant, width: isSelected ? 2 : 1),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            backgroundColor: isSelected ? colorScheme.primaryContainer : colorScheme.surfaceVariant,
-            child: Icon(icon, color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant),
-          ),
-          const SizedBox(width: 16),
-          Text(label, style: textTheme.titleLarge),
-          const Spacer(),
-          if (isSelected) 
-            Icon(Icons.check_circle, color: colorScheme.primary)
-          else
-            Container(width: 24, height: 24, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: colorScheme.outlineVariant))),
-        ],
+    return InkWell(
+      onTap: () => setState(() => _vehicleType = label),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFE8F0EA) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: isSelected ? const Color(0xFF1B4332) : Colors.grey.shade300, width: isSelected ? 2 : 1),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: isSelected ? const Color(0xFF1B4332) : Colors.grey),
+            const SizedBox(width: 16),
+            Text(label, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: isSelected ? const Color(0xFF1B4332) : Colors.black87)),
+            const Spacer(),
+            if (isSelected) const Icon(Icons.check_circle, color: Color(0xFF1B4332)),
+          ],
+        ),
       ),
     );
   }
 
-  void _showSuccessDialog() {
-    final colorScheme = Theme.of(context).colorScheme;
+  Widget _buildStep5() {
     final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
     
+    // Ambil koordinat kota tujuan
+    final coords = _cityCoords[_destination] ?? _cityCoords['Jakarta']!;
+    final nearbyPlacesAsync = ref.watch(nearbyDestinationsProvider((lat: coords.lat, lon: coords.lon)));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+          child: Text('Tambah destinasi di $_destination.', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1B4332))),
+        ),
+        
+        // Category Filter
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          child: Row(
+            children: ['Semua', 'Wisata', 'Cafe', 'Hotel', 'Belanja'].map((cat) => Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ChoiceChip(
+                label: Text(cat),
+                selected: _activeCategory == cat,
+                onSelected: (val) => setState(() => _activeCategory = cat),
+                selectedColor: const Color(0xFF1B4332),
+                labelStyle: TextStyle(color: _activeCategory == cat ? Colors.white : const Color(0xFF1B4332)),
+              ),
+            )).toList(),
+          ),
+        ),
+
+        if (_selectedDestinations.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            child: Wrap(
+              spacing: 8,
+              children: _selectedDestinations.map((d) => Chip(
+                label: Text(d.name, style: const TextStyle(fontSize: 11)),
+                onDeleted: () => setState(() => _selectedDestinations.remove(d)),
+                backgroundColor: const Color(0xFFE8F0EA),
+              )).toList(),
+            ),
+          ),
+
+        Expanded(
+          child: nearbyPlacesAsync.when(
+            data: (places) {
+              final filtered = places.where((p) => _activeCategory == 'Semua' || p.category == _activeCategory).toList();
+              return ListView.builder(
+                padding: const EdgeInsets.all(24),
+                itemCount: filtered.length,
+                itemBuilder: (context, index) {
+                  final place = filtered[index];
+                  final isSelected = _selectedDestinations.any((d) => d.id == place.id);
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: isSelected ? const Color(0xFFE8F0EA) : Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: isSelected ? const Color(0xFF1B4332) : colorScheme.outlineVariant),
+                    ),
+                    child: ListTile(
+                      title: Text(place.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Text('${place.category} • ${place.location}'),
+                      trailing: Icon(isSelected ? Icons.check_circle : Icons.add_circle_outline, color: const Color(0xFF1B4332)),
+                      onTap: () {
+                        setState(() {
+                          if (isSelected) _selectedDestinations.removeWhere((d) => d.id == place.id);
+                          else _selectedDestinations.add(place);
+                        });
+                      },
+                    ),
+                  );
+                },
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (err, _) => const Center(child: Text('Gagal memuat rekomendasi tempat')),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showSuccessDialog(String tripId) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => Scaffold(
-        backgroundColor: colorScheme.surface,
+        backgroundColor: Colors.white,
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(40.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: colorScheme.primaryContainer.withOpacity(0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(Icons.check_circle, size: 80, color: colorScheme.primary),
-                ),
+                const Icon(Icons.check_circle, size: 100, color: Color(0xFF1B4332)),
                 const SizedBox(height: 32),
-                Text('Trip dibuat!', style: textTheme.headlineLarge),
+                const Text('Trip Berhasil Dibuat!', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1B4332))),
                 const SizedBox(height: 16),
-                Text(
-                  '${_nameController.text.isEmpty ? 'Trip Baru' : _nameController.text} siap kamu rencanakan.',
-                  textAlign: TextAlign.center,
-                  style: textTheme.bodyLarge?.copyWith(color: colorScheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 64),
+                const Text('Rencana perjalananmu telah siap. Mari mulai petualangan!', textAlign: TextAlign.center),
+                const SizedBox(height: 48),
                 ElevatedButton(
-                  onPressed: () => context.go('/trip-detail'),
-                  child: const Text('Lihat Detail Trip'),
-                ),
-                const SizedBox(height: 12),
-                TextButton(
-                  onPressed: () => context.go('/'),
-                  child: Text('Ke Home', style: TextStyle(color: colorScheme.secondary)),
+                  onPressed: () => context.go('/trip-detail/$tripId'),
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1B4332), minimumSize: const Size.fromHeight(56)),
+                  child: const Text('Lihat Detail Perjalanan', style: TextStyle(color: Colors.white)),
                 ),
               ],
             ),

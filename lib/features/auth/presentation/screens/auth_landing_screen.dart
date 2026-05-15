@@ -28,16 +28,17 @@ class AuthLandingScreen extends StatelessWidget {
         child: Column(
           children: [
             const SizedBox(height: 24),
-            // Hero Image
-            Container(
-              height: 240,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                image: const DecorationImage(
-                  image: NetworkImage(
-                      'https://lh3.googleusercontent.com/aida-public/AB6AXuAKY86uI6hyYKUGWGzj5lY2Ow_PBHJ60ZWtJyUndDNWato8lfIeQlrUsoVBaMVzEC9ZRo8rGhO0wG3CvWmiTcXrAVqp_YN8OSFpA5wL55jagCo0PxS3OrsChLhDDYj8Jbv7e-tcBXnpQAk7Ve2fFrlLLxKvhT1Gqvp9N-V5sfzn_vaKWLsiR4j04g5uplUvt2_jm14bzkgq6YywPMRfrwSeMTWJoB_kHDNToRmJQ9R41Zckm_3Pg-A0CPJM2OvRSiA_BWQeS-N272A'),
-                  fit: BoxFit.cover,
+            // Logo Image
+            SizedBox(
+              height: 200,
+              width: 200,
+              child: Image.asset(
+                'assets/images/logo.png',
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) => Icon(
+                  Icons.location_on, 
+                  color: colorScheme.primary, 
+                  size: 120
                 ),
               ),
             ),

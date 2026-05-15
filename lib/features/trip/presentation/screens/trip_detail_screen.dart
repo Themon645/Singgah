@@ -19,6 +19,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> with Single
   late TabController _tabController;
   bool _isMapView = false;
   GoogleMapController? _mapController;
+  int _selectedDay = 1;
 
   @override
   void initState() {
@@ -330,42 +331,71 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> with Single
   }
 
   Widget _buildTimelineTab(Trip trip) {
-    if (trip.itinerary.isEmpty) return const Center(child: Text('Tambahkan destinasi untuk menyusun jadwal.'));
-    return ReorderableListView(
-      padding: const EdgeInsets.all(20),
-      onReorder: (oldIndex, newIndex) {
-        ref.read(tripsProvider.notifier).reorderItinerary(trip.id, oldIndex, newIndex);
-      },
-      header: Column(
-        children: [
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _buildDayChip('Hari 1', true),
-                const SizedBox(width: 8),
-                _buildDayChip('Hari 2', false),
-              ],
-            ),
+    final totalDays = trip.endDate.difference(trip.startDate).inDays + 1;
+    final dayItinerary = trip.itinerary.where((d) => d.visitDay == _selectedDay).toList();
+
+    return Column(
+      children: [
+        const SizedBox(height: 20),
+        // Day Selector Dinamis
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            children: List.generate(totalDays, (index) {
+              final day = index + 1;
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  label: Text('Hari $day'),
+                  selected: _selectedDay == day,
+                  onSelected: (selected) {
+                    if (selected) setState(() => _selectedDay = day);
+                  },
+                  selectedColor: const Color(0xFF1B4332),
+                  labelStyle: TextStyle(color: _selectedDay == day ? Colors.white : Colors.black87),
+                ),
+              );
+            }),
           ),
-          const SizedBox(height: 24),
-        ],
-      ),
-      children: trip.itinerary.asMap().entries.map((entry) => _buildTimelineItem(
-        key: ValueKey(entry.value.id),
-        tripId: trip.id,
-        destination: entry.value,
-        isLast: entry.key == trip.itinerary.length - 1,
-      )).toList(),
+        ),
+        const SizedBox(height: 24),
+        Expanded(
+          child: dayItinerary.isEmpty
+              ? _buildEmptyTimeline()
+              : ReorderableListView(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  onReorder: (oldIndex, newIndex) {
+                    // Logika reorder khusus hari ini jika diperlukan
+                  },
+                  children: dayItinerary.asMap().entries.map((entry) => _buildTimelineItem(
+                    key: ValueKey(entry.value.id),
+                    tripId: trip.id,
+                    destination: entry.value,
+                    isLast: entry.key == dayItinerary.length - 1,
+                    totalDays: totalDays,
+                  )).toList(),
+                ),
+        ),
+      ],
     );
   }
 
-  Widget _buildDayChip(String label, bool isActive) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Chip(
-      label: Text(label),
-      backgroundColor: isActive ? colorScheme.primary : colorScheme.surfaceContainerHighest,
-      labelStyle: TextStyle(color: isActive ? Colors.white : colorScheme.onSurfaceVariant),
+  Widget _buildEmptyTimeline() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.event_note, size: 64, color: Colors.grey.shade300),
+          const SizedBox(height: 16),
+          const Text('Belum ada rencana untuk hari ini', style: TextStyle(color: Colors.grey)),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: () => context.push('/explore'),
+            child: const Text('Tambah Destinasi'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -373,19 +403,15 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> with Single
     required Key key,
     required String tripId,
     required Destination destination,
+    required int totalDays,
     bool isLast = false,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return InkWell(
+    return Container(
       key: key,
-      onTap: () => showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (context) => TimePickerSheet(tripId: tripId, destination: destination),
-      ),
+      margin: const EdgeInsets.only(bottom: 24),
       child: IntrinsicHeight(
         child: Row(
           children: [
@@ -394,47 +420,117 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> with Single
                 Container(
                   width: 12,
                   height: 12,
-                  decoration: BoxDecoration(color: colorScheme.primary, shape: BoxShape.circle),
+                  decoration: const BoxDecoration(color: Color(0xFF1B4332), shape: BoxShape.circle),
                 ),
-                if (!isLast) Expanded(child: Container(width: 2, color: colorScheme.outlineVariant)),
+                if (!isLast) Expanded(child: Container(width: 2, color: Colors.grey.shade200)),
               ],
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+              child: InkWell(
+                onTap: () => _showDestinationOptions(tripId, destination, totalDays),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(4)),
-                        child: Text(destination.arrivalTime ?? '08:00', style: textTheme.labelSmall),
+                      Row(
+                        children: [
+                          Text(destination.arrivalTime ?? 'Pilih Jam', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1B4332))),
+                          const Spacer(),
+                          const Icon(Icons.more_horiz, size: 20, color: Colors.grey),
+                        ],
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(child: Text(destination.name, style: textTheme.titleMedium, overflow: TextOverflow.ellipsis)),
-                      const Icon(Icons.drag_handle, color: Colors.grey, size: 20),
+                      const SizedBox(height: 8),
+                      Text(destination.name, style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                      Text(destination.location, style: textTheme.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.directions_car, size: 16, color: colorScheme.onSurfaceVariant),
-                        const SizedBox(width: 8),
-                        Expanded(child: Text(destination.location, style: textTheme.labelMedium?.copyWith(color: colorScheme.onSurfaceVariant))),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                ],
+                ),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDestinationOptions(String tripId, Destination destination, int totalDays) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(destination.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 24),
+            ListTile(
+              leading: const Icon(Icons.access_time),
+              title: const Text('Atur Jam Kunjungan'),
+              onTap: () {
+                Navigator.pop(context);
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (context) => TimePickerSheet(tripId: tripId, destination: destination),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.calendar_today),
+              title: const Text('Pindah ke Hari Lain'),
+              onTap: () {
+                Navigator.pop(context);
+                _showDayPicker(tripId, destination, totalDays);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: Colors.red),
+              title: const Text('Hapus dari Rencana', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                ref.read(tripsProvider.notifier).removeDestinationFromTrip(tripId, destination.id);
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDayPicker(String tripId, Destination destination, int totalDays) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Pindah ke Hari', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 12,
+              children: List.generate(totalDays, (index) {
+                final day = index + 1;
+                return ChoiceChip(
+                  label: Text('Hari $day'),
+                  selected: false,
+                  onSelected: (_) {
+                    ref.read(tripsProvider.notifier).updateDestination(tripId, destination.id, visitDay: day);
+                    Navigator.pop(context);
+                  },
+                );
+              }),
             ),
           ],
         ),

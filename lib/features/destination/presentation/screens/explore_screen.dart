@@ -7,19 +7,11 @@ import '../../domain/entities/destination.dart';
 class ExploreScreen extends ConsumerWidget {
   const ExploreScreen({super.key});
 
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final allDestinations = ref.watch(destinationsProvider);
-    
-    // Data dari API (Overpass/Google)
-    final nearbyAsync = ref.watch(nearbyDestinationsProvider((lat: -6.2088, lon: 106.8456)));
-    final googleHotelsAsync = ref.watch(googleHotelsProvider((lat: -6.2088, lon: 106.8456)));
-    final googleWisataAsync = ref.watch(googleWisataProvider((lat: -6.2088, lon: 106.8456)));
-    final googleCafeAsync = ref.watch(googleCafeProvider((lat: -6.2088, lon: 106.8456)));
-    final googleShopAsync = ref.watch(googleShopProvider((lat: -6.2088, lon: 106.8456)));
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
@@ -74,65 +66,31 @@ class ExploreScreen extends ConsumerWidget {
               
               const SizedBox(height: 32),
 
-              // --- SEKSI CAFE (API & Lokal) ---
-              googleCafeAsync.when(
-                data: (cafes) {
-                  if (cafes.isEmpty) return _buildCitySection(context, 'Cafe di Bandung', 
-                      allDestinations.where((d) => d.category == 'Cafe' && d.location.contains('Bandung')).toList(), 'Cafe Bandung');
-                  return _buildCitySection(context, 'Cafe Populer (API)', cafes, 'Cafe');
-                },
-                loading: () => const SizedBox.shrink(),
-                error: (_, __) => _buildCitySection(context, 'Cafe di Bandung', 
-                      allDestinations.where((d) => d.category == 'Cafe' && d.location.contains('Bandung')).toList(), 'Cafe Bandung'),
-              ),
+              // --- SEKSI CAFE ---
+              _buildCitySection(context, 'Cafe di Bandung', 
+                  allDestinations.where((d) => d.category == 'Cafe' && d.location.contains('Bandung')).toList(), 'Cafe Bandung'),
+              _buildCitySection(context, 'Cafe di Bali', 
+                  allDestinations.where((d) => d.category == 'Cafe' && d.location.contains('Bali')).toList(), 'Cafe Bali'),
               
               const SizedBox(height: 16),
               const Divider(indent: 20, endIndent: 20),
               const SizedBox(height: 24),
 
-              // --- SEKSI HOTEL (DATA API) ---
-              googleHotelsAsync.when(
-                data: (hotels) {
-                  if (hotels.isEmpty) {
-                    return _buildCitySection(context, 'Penginapan di Bandung', 
-                      allDestinations.where((d) => d.category == 'Hotel' && d.location.contains('Bandung')).toList(), 'Hotel Bandung');
-                  }
-                  return _buildCitySection(context, 'Penginapan Populer (API)', hotels, 'Hotel');
-                },
-                loading: () => const Center(child: Padding(
-                  padding: EdgeInsets.all(20),
-                  child: CircularProgressIndicator(),
-                )),
-                error: (err, stack) {
-                  debugPrint('Error loading API Hotels: $err');
-                  return _buildCitySection(context, 'Penginapan di Bandung', 
-                    allDestinations.where((d) => d.category == 'Hotel' && d.location.contains('Bandung')).toList(), 'Hotel Bandung');
-                },
-              ),
+              // --- SEKSI HOTEL ---
+              _buildCitySection(context, 'Penginapan di Bandung', 
+                  allDestinations.where((d) => d.category == 'Hotel' && d.location.contains('Bandung')).toList(), 'Hotel Bandung'),
+              _buildCitySection(context, 'Penginapan di Bali', 
+                  allDestinations.where((d) => d.category == 'Hotel' && d.location.contains('Bali')).toList(), 'Hotel Bali'),
 
               const SizedBox(height: 16),
               const Divider(indent: 20, endIndent: 20),
               const SizedBox(height: 24),
 
-              // --- SEKSI WISATA TERDEKAT (DATA API) ---
-              googleWisataAsync.when(
-                data: (places) => _buildCitySection(context, 'Wisata Terpopuler (API)', places, 'Wisata'),
-                loading: () => const SizedBox.shrink(),
-                error: (err, stack) => const SizedBox.shrink(),
-              ),
-
-              // --- SEKSI WISATA (Data Lokal) ---
+              // --- SEKSI WISATA ---
               _buildCitySection(context, 'Wisata di Yogyakarta', 
                   allDestinations.where((d) => d.category == 'Wisata' && d.location.contains('Yogyakarta')).toList(), 'Wisata Yogyakarta'),
               _buildCitySection(context, 'Wisata di Bandung', 
                   allDestinations.where((d) => d.category == 'Wisata' && d.location.contains('Bandung')).toList(), 'Wisata Bandung'),
-
-              // --- SEKSI BELANJA (API) ---
-              googleShopAsync.when(
-                data: (shops) => _buildCitySection(context, 'Pusat Belanja (API)', shops, 'Belanja'),
-                loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
-              ),
 
               const SizedBox(height: 100),
             ],

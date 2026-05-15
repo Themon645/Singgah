@@ -12,9 +12,18 @@ void main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
     
-    // Load environment variables
-    await dotenv.load(fileName: ".env");
-    debugPrint("Dotenv loaded. Google Key: ${dotenv.env['GOOGLE_PLACES_API_KEY']?.substring(0, 5)}...");
+    // Load environment variables safely
+    try {
+      await dotenv.load(fileName: ".env");
+      final key = dotenv.maybeGet('GOOGLE_PLACES_API_KEY');
+      if (key != null && key.length > 5) {
+        debugPrint("Dotenv loaded. Google Key: ${key.substring(0, 5)}...");
+      } else {
+        debugPrint("Dotenv loaded but Google Key is missing or too short.");
+      }
+    } catch (e) {
+      debugPrint('Dotenv loading failed: $e. Using fallback empty values.');
+    }
     
     // Initialize Hive
     await Hive.initFlutter();
@@ -36,8 +45,17 @@ void main() async {
     );
   } catch (e) {
     debugPrint('Initialization Error: $e');
-    // Jalankan app minimal untuk menunjukkan pesan error jika gagal total
-    runApp(MaterialApp(home: Scaffold(body: Center(child: Text('Terjadi kesalahan saat memulai aplikasi: $e')))));
+    runApp(MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text('Terjadi kesalahan saat memulai aplikasi:\n$e', textAlign: TextAlign.center),
+          ),
+        ),
+      ),
+    ));
   }
 }
 

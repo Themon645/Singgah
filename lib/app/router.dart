@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:singgah/features/auth/presentation/screens/splash_screen.dart';
 import 'package:singgah/features/destination/domain/entities/destination.dart';
@@ -42,7 +43,10 @@ final goRouter = GoRouter(
     ),
     GoRoute(
       path: '/explore-result',
-      builder: (context, state) => const ExploreResultScreen(),
+      builder: (context, state) {
+        final query = state.uri.queryParameters['query'];
+        return ExploreResultScreen(initialQuery: query);
+      },
     ),
     GoRoute(
       path: '/destination-detail',

@@ -36,12 +36,23 @@ class HomeScreen extends ConsumerWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Singgah',
-                      style: textTheme.displayLarge?.copyWith(
-                        color: colorScheme.primary,
-                        fontSize: 26,
-                      ),
+                    Row(
+                      children: [
+                        Image.asset(
+                          'assets/images/logo.png', 
+                          height: 32,
+                          errorBuilder: (context, error, stackTrace) => const Icon(Icons.location_on, color: Color(0xFF1B4332), size: 32),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Singgah',
+                          style: textTheme.displayLarge?.copyWith(
+                            color: const Color(0xFF1B4332),
+                            fontSize: 26,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -204,8 +215,6 @@ class HomeScreen extends ConsumerWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 32),
-              _buildNearbySection(context, ref),
               const SizedBox(height: 32),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
